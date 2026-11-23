@@ -1,0 +1,12 @@
+{
+  "topic": "video-playback-by-id.10000002",
+  "message": {
+    "type": "viewcount",
+    "server_time": 1795384672.72484,
+    "viewers": 26,
+    "collaboration_status": "none",
+    "collaboration_viewers": 0,
+    "costream_status": "",
+    "costream_viewers": 0
+  }
+}

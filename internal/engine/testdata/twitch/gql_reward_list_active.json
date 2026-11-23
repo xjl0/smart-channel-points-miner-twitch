@@ -1,0 +1,25 @@
+{
+  "channel": {
+    "id": "10000002",
+    "self": {
+      "watchStreakMilestone": {
+        "watchStreakMilestone": {
+          "id": "a4134a9d-d2dd-4550-85b6-f777d65f45e4",
+          "value": "1",
+          "category": "WATCH_STREAK",
+          "achievementTimestamp": "2026-11-22T22:17:03Z",
+          "shareStatus": "CAN_NOT_SHARE",
+          "__typename": "ViewerMilestone"
+        },
+        "watchStreakThreshold": 2,
+        "watchStreakCopoBonus": 300,
+        "state": "ACTIVE",
+        "missedStreams": null,
+        "expiresAt": null,
+        "__typename": "WatchStreakMilestone"
+      },
+      "__typename": "ChannelSelfEdge"
+    },
+    "__typename": "Channel"
+  }
+}

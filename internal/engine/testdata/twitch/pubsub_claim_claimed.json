@@ -1,0 +1,23 @@
+{
+  "topic": "community-points-user-v1.1000",
+  "message": {
+    "type": "claim-claimed",
+    "data": {
+      "timestamp": "2026-11-22T22:23:41.616301931Z",
+      "claim": {
+        "id": "107a5ec8-0ef7-4675-ae51-83f6e6e61695",
+        "user_id": "1000",
+        "channel_id": "10000005",
+        "point_gain": {
+          "user_id": "1000",
+          "channel_id": "10000005",
+          "total_points": 50,
+          "baseline_points": 50,
+          "reason_code": "CLAIM",
+          "multipliers": []
+        },
+        "created_at": "2026-11-22T22:23:38Z"
+      }
+    }
+  }
+}

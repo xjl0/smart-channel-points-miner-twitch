@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="400" viewBox="0 0 880 400" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#52525b"/>
+    </marker>
+  </defs>
+  <rect width="880" height="400" rx="14" fill="#ffffff"/>
+
+  <!-- Twitch -->
+  <rect x="24" y="40" width="220" height="320" rx="12" fill="#f3e8ff" stroke="#9146ff" stroke-width="2"/>
+  <text x="134" y="72" text-anchor="middle" font-size="18" font-weight="700" fill="#6d28d9">Twitch</text>
+  <g font-size="13" fill="#3f3f46">
+    <text x="44" y="110" font-weight="600">PubSub</text>
+    <text x="44" y="128">эфир начался/закончился,</text>
+    <text x="44" y="144">баллы, стрики, сундуки</text>
+    <text x="44" y="180" font-weight="600">GQL</text>
+    <text x="44" y="198">кто в эфире, RewardList,</text>
+    <text x="44" y="214">клик сундука</text>
+    <text x="44" y="250" font-weight="600">spade</text>
+    <text x="44" y="268">«минута просмотра»</text>
+    <text x="44" y="304" font-weight="600">Чат (IRC)</text>
+    <text x="44" y="322">JOIN — мы в списке зрителей</text>
+  </g>
+
+  <!-- Miner -->
+  <rect x="330" y="40" width="300" height="320" rx="12" fill="#ecfdf5" stroke="#10b981" stroke-width="2"/>
+  <text x="480" y="72" text-anchor="middle" font-size="18" font-weight="700" fill="#047857">Майнер (Go)</text>
+  <g font-size="13" fill="#3f3f46">
+    <text x="350" y="104" font-weight="600">Планировщик: не больше 2 каналов</text>
+    <rect x="350" y="116" width="260" height="52" rx="8" fill="#ffffff" stroke="#a7f3d0"/>
+    <text x="362" y="138">1. Стрик: кто вышел в эфир и</text>
+    <text x="362" y="156">ещё без стрика — по очереди</text>
+    <rect x="350" y="176" width="260" height="52" rx="8" fill="#ffffff" stroke="#a7f3d0"/>
+    <text x="362" y="198">2. Стрики собраны — смотрим того,</text>
+    <text x="362" y="216">кого меньше всех за трансляцию</text>
+    <rect x="350" y="236" width="260" height="36" rx="8" fill="#ffffff" stroke="#a7f3d0"/>
+    <text x="362" y="259">3. Никого в эфире — не смотрим</text>
+    <text x="350" y="300" font-weight="600">Сундуки, моменты, без записи в чат</text>
+    <text x="350" y="322">SQLite: каналы, трансляции, история</text>
+  </g>
+
+  <!-- Admin -->
+  <rect x="716" y="40" width="140" height="320" rx="12" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+  <text x="786" y="72" text-anchor="middle" font-size="18" font-weight="700" fill="#1d4ed8">Админка</text>
+  <g font-size="13" fill="#3f3f46" text-anchor="middle">
+    <text x="786" y="110">Caddy +</text>
+    <text x="786" y="128">пароль</text>
+    <text x="786" y="170">слоты, чат,</text>
+    <text x="786" y="188">каналы,</text>
+    <text x="786" y="206">история,</text>
+    <text x="786" y="224">настройки</text>
+    <text x="786" y="266">обновления</text>
+    <text x="786" y="284">вживую (SSE)</text>
+  </g>
+
+  <!-- arrows -->
+  <line x1="246" y1="150" x2="326" y2="150" stroke="#52525b" stroke-width="2" marker-end="url(#a)"/>
+  <text x="286" y="140" text-anchor="middle" font-size="11" fill="#52525b">события</text>
+  <line x1="326" y1="250" x2="246" y2="250" stroke="#52525b" stroke-width="2" marker-end="url(#a)"/>
+  <text x="286" y="240" text-anchor="middle" font-size="11" fill="#52525b">просмотр</text>
+  <line x1="632" y1="200" x2="712" y2="200" stroke="#52525b" stroke-width="2" marker-start="url(#a)" marker-end="url(#a)"/>
+  <text x="672" y="190" text-anchor="middle" font-size="11" fill="#52525b">API</text>
+</svg>

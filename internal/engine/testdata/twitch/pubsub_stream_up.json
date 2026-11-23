@@ -1,0 +1,9 @@
+{
+  "_note": "synthetic: not captured yet; shape as handled by the reference miner",
+  "topic": "video-playback-by-id.CHANNEL",
+  "message": {
+    "type": "stream-up",
+    "server_time": 1795384672.7,
+    "play_delay": 0
+  }
+}

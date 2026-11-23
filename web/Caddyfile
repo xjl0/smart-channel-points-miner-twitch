@@ -1,0 +1,51 @@
+# Caddy — единственная точка входа в админку:
+#   * раздаёт собранную админку (web/dist) как статику;
+#   * проверяет HTTP Basic логин (пароль из .env, хэш считает caddy-entrypoint.sh);
+#   * проксирует Connect RPC (/miner.v1.*) и SSE-поток (/live) в Go-бэкенд.
+# Go наружу не публикуется: доступен только Caddy внутри сети compose.
+{
+	admin off
+	# Локальный HTTP. Для доступа извне по домену замените ":8080" на "miner.example.com" —
+	# Caddy сам получит HTTPS-сертификат (без HTTPS Basic-пароль идёт открытым текстом).
+	auto_https off
+	# Без TLS HTTP/2 и HTTP/3 недоступны — явно оставляем HTTP/1.1, чтобы не было предупреждений.
+	servers {
+		protocols h1
+	}
+}
+
+:8080 {
+	encode zstd gzip
+
+	# Всё, кроме проверки живости, — только по логину. Матчер обязателен:
+	# basic_auth выполняется раньше любых handle и иначе закрыл бы и /healthz.
+	@protected not path /healthz
+	basic_auth @protected {
+		{$MINER_ADMIN_USER:admin} {$ADMIN_PASSWORD_HASH}
+	}
+
+	# Проверка живости для healthcheck контейнера.
+	handle /healthz {
+		respond "ok" 200
+	}
+
+	handle /miner.v1.* {
+		reverse_proxy {$BACKEND:miner:8080}
+	}
+
+	handle /live {
+		reverse_proxy {$BACKEND:miner:8080} {
+			flush_interval -1 # SSE: каждое событие сразу клиенту, без буферизации
+		}
+	}
+
+	handle {
+		root * /srv
+		# Файлы со хэшем в имени не меняются — кэшируем надолго; index.html — всегда свежий.
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		header /index.html Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}

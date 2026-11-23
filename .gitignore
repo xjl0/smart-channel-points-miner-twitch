@@ -1,0 +1,11 @@
+.DS_Store
+/data/
+/web/node_modules/
+/web/dist/
+*.db
+*.db-*
+/trace/
+.env
+.idea/
+.vscode/
+.claude/

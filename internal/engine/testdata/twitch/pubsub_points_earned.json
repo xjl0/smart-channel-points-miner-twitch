@@ -1,0 +1,23 @@
+{
+  "topic": "community-points-user-v1.1000",
+  "message": {
+    "type": "points-earned",
+    "data": {
+      "timestamp": "2026-11-22T22:17:06.369950028Z",
+      "channel_id": "10000002",
+      "point_gain": {
+        "user_id": "1000",
+        "channel_id": "10000002",
+        "total_points": 10,
+        "baseline_points": 10,
+        "reason_code": "WATCH",
+        "multipliers": []
+      },
+      "balance": {
+        "user_id": "1000",
+        "channel_id": "10000002",
+        "balance": 4240
+      }
+    }
+  }
+}

@@ -1,0 +1,278 @@
+// Контракт между бэкендом майнера и админ-панелью.
+//
+// Команды — унарные Connect RPC. Live-обновления НЕ являются RPC: это
+// обычный поток Server-Sent Events на GET /live (internal/api/sse.go), чьи
+// события несут LiveMessage в виде JSON. У каждого сообщения монотонно
+// возрастающий seq ("снапшот + дельты + возобновление"); сообщения состояния несут
+// полное состояние одной сущности, поэтому их применение идемпотентно.
+syntax = "proto3";
+
+package miner.v1;
+
+import "google/protobuf/timestamp.proto";
+
+service MinerService {
+  // Управление каналами.
+  rpc AddChannel(AddChannelRequest) returns (AddChannelResponse);
+  rpc RemoveChannel(RemoveChannelRequest) returns (RemoveChannelResponse);
+  rpc SetChannelEnabled(SetChannelEnabledRequest) returns (SetChannelEnabledResponse);
+  // Забыть стрик текущей трансляции и поставить канал первым в
+  // очереди стриков (для стриков, которые были предположены, но так и не получены).
+  rpc RetryStreak(RetryStreakRequest) returns (RetryStreakResponse);
+
+  // Таймеры движка: применяются сразу, без перезапуска, и сохраняются в БД.
+  rpc UpdateSettings(UpdateSettingsRequest) returns (UpdateSettingsResponse);
+
+  // История событий, сначала новые.
+  rpc ListEvents(ListEventsRequest) returns (ListEventsResponse);
+
+  // Аккаунт Twitch: вход по device-code и выход.
+  rpc StartLogin(StartLoginRequest) returns (StartLoginResponse);
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+}
+
+// ---------- сущности ----------
+
+enum SlotReason {
+  SLOT_REASON_UNSPECIFIED = 0;
+  SLOT_REASON_STREAK = 1; // пытаемся получить стрик просмотра
+  SLOT_REASON_FILL = 2; // стрики получены, смотрим наименее просмотренный канал
+}
+
+// Полное состояние одного отслеживаемого канала.
+message Channel {
+  string id = 1;
+  string login = 2;
+  string display_name = 3;
+  bool enabled = 4;
+  bool online = 5;
+  string broadcast_id = 6;
+  google.protobuf.Timestamp online_since = 7;
+  string title = 8;
+  string game = 9;
+  bool streak_claimed = 10; // получен или предположен, для текущей трансляции
+  reserved 11; // было streak_attempts
+  int32 streak_length = 12; // последняя известная длина стрика
+  int64 watched_seconds = 13; // наше время просмотра в текущей трансляции
+  int64 points = 14; // баланс баллов канала
+  bool missing = 15; // Twitch больше не знает этот логин (бан или переименование)
+  google.protobuf.Timestamp streak_expires_at = 16; // стрик сгорит, если к этому времени не посмотреть ни одной трансляции
+  double points_bonus = 17; // активные множители баллов, напр. 0.2 = +20%
+  int32 viewers = 18; // текущее число зрителей (также обновляется через ViewersChanged)
+  ChatModes chat_modes = 19; // из IRC ROOMSTATE, пока мы в чате
+  repeated int32 streak_bonus = 20; // баллы за каждый уровень стрика (из настроек канала)
+  bool streak_retry = 21; // ожидается ручной повтор стрика: первый в очереди
+}
+
+// Таймеры движка, меняемые из админки. Все длительности — в секундах.
+// Описание каждого — на странице «Настройки» админки (web/src/components/SettingsPage.tsx).
+message Settings {
+  int32 streak_assume_after_sec = 1; // засчитанных минут без стрика → считаем стрик полученным
+  int32 streak_attempt_max_sec = 2; // потолок попытки стрика по часам
+  int32 streak_linger_sec = 3; // досмотр после стрика (±1/3)
+  int32 fill_hold_sec = 4; // минимум на канале в обычном просмотре (±1/3)
+  int32 streak_cooldown_sec = 5; // отдых канала после потолка попытки
+  int32 streak_check_every_sec = 6; // проверка RewardList во время попытки
+  int32 chest_delay_min_sec = 7; // задержка перед кликом сундука: от…
+  int32 chest_delay_max_sec = 8; // …до
+  int32 moment_delay_min_sec = 9; // задержка перед получением момента: от…
+  int32 moment_delay_max_sec = 10; // …до
+  int32 online_poll_min_sec = 11; // плановая проверка онлайна каналов: от…
+  int32 online_poll_max_sec = 12; // …до
+  int32 scheduler_tick_min_sec = 13; // шаг планировщика: от…
+  int32 scheduler_tick_max_sec = 14; // …до
+}
+
+// Ограничения чата канала (IRC ROOMSTATE).
+message ChatModes {
+  bool emote_only = 1;
+  int32 followers_only_minutes = 2; // -1 выкл., 0 любой фолловер, N минут с момента подписки
+  int32 slow_seconds = 3; // 0 выкл.
+  bool subs_only = 4;
+  bool unique_chat = 5; // r9k
+}
+
+// Один из (не более двух) активных просмотров.
+message Slot {
+  string channel_id = 1;
+  SlotReason reason = 2;
+  google.protobuf.Timestamp started_at = 3;
+  // streak: когда стрик считается полученным (или конец досмотра после получения); fill: конец минимального удержания.
+  google.protobuf.Timestamp deadline = 4;
+  bool lingering = 5; // стрик уже получен, смотрим ещё немного
+  int32 beacon_failures = 6; // minute-watched подряд не прошли (0 — всё в порядке)
+}
+
+message DeviceLogin {
+  string user_code = 1;
+  string verification_uri = 2;
+  google.protobuf.Timestamp expires_at = 3;
+}
+
+message Account {
+  bool logged_in = 1;
+  string login = 2;
+  string user_id = 3;
+  DeviceLogin pending_login = 4; // задано, пока вход по device-code ждёт подтверждения
+}
+
+// ---------- live-поток (SSE, см. GET /live) ----------
+
+message LiveMessage {
+  // Порядковый номер последней применённой дельты. Дельты увеличивают его на один;
+  // Snapshot, Heartbeat и ChatMessage повторяют текущее значение (они
+  // не дельты: никогда не сохраняются и не воспроизводятся повторно).
+  uint64 seq = 1;
+  google.protobuf.Timestamp ts = 2;
+
+  oneof body {
+    // Состояние (сущность заменяется целиком).
+    Snapshot snapshot = 10;
+    ChannelUpdated channel_updated = 11;
+    ChannelRemoved channel_removed = 12;
+    SlotsChanged slots_changed = 13;
+    QueueChanged queue_changed = 14;
+    AccountChanged account_changed = 15;
+    SettingsChanged settings_changed = 16;
+    // События (лента; WatchTick и PointsGained также обновляют счётчики канала).
+    WatchTick watch_tick = 20;
+    PointsGained points_gained = 21;
+    StreakResult streak_result = 22;
+    LogEntry log_entry = 23;
+    Heartbeat heartbeat = 24;
+    // Эфемерные (только live, не сохраняются, не воспроизводятся при возобновлении).
+    ChatMessage chat_message = 25;
+    ViewersChanged viewers_changed = 26;
+  }
+}
+
+message Snapshot {
+  Account account = 1;
+  repeated Channel channels = 2;
+  repeated Slot slots = 3;
+  repeated string streak_queue = 4; // id каналов, ожидающих попытки стрика, по порядку
+  Settings settings = 5; // текущие таймеры
+  Settings default_settings = 6; // значения по умолчанию (для кнопки «вернуть стандартные»)
+}
+
+message ChannelUpdated {
+  Channel channel = 1;
+}
+
+message ChannelRemoved {
+  string channel_id = 1;
+}
+
+// Полный набор слотов (не более двух записей).
+message SlotsChanged {
+  repeated Slot slots = 1;
+}
+
+message QueueChanged {
+  repeated string channel_ids = 1;
+}
+
+message SettingsChanged {
+  Settings settings = 1;
+  Settings defaults = 2; // значения по умолчанию (не меняются, едут вместе для удобства админки)
+}
+
+message AccountChanged {
+  Account account = 1;
+}
+
+// Маячок minute-watched успешно отправлен.
+message WatchTick {
+  string channel_id = 1;
+  int64 watched_seconds = 2; // новый итог для текущей трансляции
+}
+
+message PointsGained {
+  string channel_id = 1;
+  int32 points = 2;
+  string reason = 3; // код причины Twitch: WATCH, WATCH_STREAK, CLAIM, ...
+  int64 balance = 4;
+}
+
+// Стрик просмотра для текущей трансляции получен.
+message StreakResult {
+  string channel_id = 1;
+  reserved 2, 4; // были success, attempt
+  int32 streak_length = 3;
+  // Стрик не пришёл, но мы смотрели достаточно долго, чтобы считать его полученным
+  // (скорее всего, он был получен раньше, напр. на другом устройстве).
+  bool assumed = 5;
+}
+
+message LogEntry {
+  string level = 1;
+  string message = 2;
+  map<string, string> attrs = 3;
+}
+
+message Heartbeat {}
+
+// Строка из одного из чатов, в которых мы присутствуем, проксируется как есть.
+message ChatMessage {
+  string channel_login = 1;
+  string user = 2; // отображаемое имя автора
+  string color = 3; // цвет имени автора "#RRGGBB", может быть пустым
+  string text = 4;
+  repeated string badges = 5; // напр. broadcaster, moderator, vip, subscriber
+  bool first_msg = 6; // первое сообщение автора в этом чате
+}
+
+// Текущее число зрителей канала (PubSub viewcount, ~каждые 30 с).
+message ViewersChanged {
+  string channel_id = 1;
+  int32 viewers = 2;
+}
+
+// ---------- унарные RPC ----------
+
+message AddChannelRequest {
+  string login = 1;
+}
+message AddChannelResponse {
+  Channel channel = 1;
+}
+
+message RemoveChannelRequest {
+  string channel_id = 1;
+}
+message RemoveChannelResponse {}
+
+message SetChannelEnabledRequest {
+  string channel_id = 1;
+  bool enabled = 2;
+}
+message SetChannelEnabledResponse {}
+
+message UpdateSettingsRequest {
+  Settings settings = 1;
+}
+message UpdateSettingsResponse {
+  Settings settings = 1;
+}
+
+message RetryStreakRequest {
+  string channel_id = 1;
+}
+message RetryStreakResponse {}
+
+message ListEventsRequest {
+  uint64 before_seq = 1; // 0 = с самых новых
+  string channel_id = 2; // необязательный фильтр
+  int32 limit = 3; // по умолчанию 50, максимум 200
+}
+message ListEventsResponse {
+  repeated LiveMessage events = 1;
+}
+
+message StartLoginRequest {}
+message StartLoginResponse {
+  DeviceLogin login = 1;
+}
+
+message LogoutRequest {}
+message LogoutResponse {}

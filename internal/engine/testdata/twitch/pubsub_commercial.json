@@ -1,0 +1,9 @@
+{
+  "topic": "video-playback-by-id.10000005",
+  "message": {
+    "type": "commercial",
+    "server_time": 1795386024.572953,
+    "length": 60,
+    "scheduled": true
+  }
+}

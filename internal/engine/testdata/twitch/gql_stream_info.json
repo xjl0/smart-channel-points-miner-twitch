@@ -1,0 +1,32 @@
+{
+  "user": {
+    "id": "10000001",
+    "profileURL": "https://www.twitch.tv/channel_a",
+    "displayName": "Channel A",
+    "login": "channel_a",
+    "profileImageURL": "https://static-cdn.jtvnw.net/example.png",
+    "roles": {
+      "isPartner": true,
+      "__typename": "UserRoles"
+    },
+    "broadcastSettings": {
+      "id": "10000001",
+      "title": "Название",
+      "game": {
+        "id": "10000003",
+        "displayName": "Just Chatting",
+        "name": "Just Chatting",
+        "slug": "just-chatting",
+        "__typename": "Game"
+      },
+      "__typename": "BroadcastSettings"
+    },
+    "stream": {
+      "id": "10000004",
+      "viewersCount": 1040,
+      "tags": [],
+      "__typename": "Stream"
+    },
+    "__typename": "User"
+  }
+}

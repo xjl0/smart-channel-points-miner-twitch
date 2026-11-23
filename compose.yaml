@@ -1,0 +1,39 @@
+# Два сервиса:
+#   web   — Caddy: админка (статика), HTTP Basic авторизация, прокси API/SSE в miner.
+#           Единственный, кто открыт наружу.
+#   miner — Go-бэкенд (движок + API). Наружу не публикуется, доступен только web.
+# Логин и пароль — в .env (шаблон .env.example); без пароля compose не запустится.
+services:
+  miner:
+    build: .
+    image: smart-twitch-points-miner
+    restart: unless-stopped
+    environment:
+      MINER_LOG_LEVEL: info
+      # Второй рубеж авторизации: Caddy передаёт заголовок с логином дальше.
+      MINER_ADMIN_USER: ${MINER_ADMIN_USER:-admin}
+      MINER_ADMIN_PASSWORD: ${MINER_ADMIN_PASSWORD:?задайте MINER_ADMIN_PASSWORD в файле .env (шаблон .env.example)}
+      # Весь исходящий трафик к Twitch (GQL, minute-watched, PubSub, чат) — через прокси
+      # из .env, если задан. Нужен, когда сеть режет адреса Twitch (например, spade.twitch.tv).
+      HTTPS_PROXY: ${MINER_PROXY:-}
+      # Только для отладки: запись сырого трафика Twitch (см. README). По умолчанию выключено.
+      # MINER_TRACE_DIR: /trace
+    volumes:
+      - miner-data:/data
+      # - ./trace:/trace        # с MINER_TRACE_DIR: файлы попадают в ./trace/YYYY-MM-DDTHH.jsonl
+
+  web:
+    build: ./web
+    image: smart-twitch-points-miner-web
+    restart: unless-stopped
+    ports:
+      - "8080:8080"   # админ-панель: http://localhost:8080 (логин и пароль из .env)
+    environment:
+      MINER_ADMIN_USER: ${MINER_ADMIN_USER:-admin}
+      MINER_ADMIN_PASSWORD: ${MINER_ADMIN_PASSWORD:?задайте MINER_ADMIN_PASSWORD в файле .env (шаблон .env.example)}
+      BACKEND: miner:8080
+    depends_on:
+      - miner
+
+volumes:
+  miner-data:

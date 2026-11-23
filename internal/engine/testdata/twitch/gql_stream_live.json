@@ -1,0 +1,11 @@
+{
+  "user": {
+    "id": "10000001",
+    "stream": {
+      "id": "10000004",
+      "createdAt": "2026-11-22T04:11:41Z",
+      "__typename": "Stream"
+    },
+    "__typename": "User"
+  }
+}
